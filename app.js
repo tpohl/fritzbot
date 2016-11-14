@@ -67,21 +67,21 @@ intents
         }
     },
     function (session, args, next) {
-        var foundMatches = findMatches(session.dialogData.foundTeamnames[0], session.dialogData.foundTeamnames[1]);
-        if (foundMatches.length>0){
-             session.send('Ich habe folgende Spiele gefunden:'); 
-            foundMatches.forEach(function (match){
-                if (match.score1!=null){
-                    session.send('%s - %s --> %d : %d',match.player1 ,match.player2, match.score1, match.score2);
-                } else {
-                    session.send('%s - %s',match.player1 ,match.player2);
-                }
-            });
-        } else {
-            session.send('Sorry, ich habe keine Spiele zwischen '+session.dialogData.foundTeamnames[0]+' und '+session.dialogData.foundTeamnames[1]+' gefunden:');
-        }
-        session.dialogData.foundTeamname = [];
-           
+        findMatches(session.dialogData.foundTeamnames[0], session.dialogData.foundTeamnames[1]).then(foundMatches =>{
+            if (foundMatches.length>0){
+                session.send('Ich habe folgende Spiele gefunden:'); 
+                foundMatches.forEach(function (match){
+                    if (match.score1!=null){
+                        session.send('%s - %s --> %d : %d',match.player1 ,match.player2, match.score1, match.score2);
+                    } else {
+                        session.send('%s - %s',match.player1 ,match.player2);
+                    }
+                });
+            } else {
+                session.send('Sorry, ich habe keine Spiele zwischen '+session.dialogData.foundTeamnames[0]+' und '+session.dialogData.foundTeamnames[1]+' gefunden:');
+            }
+            session.dialogData.foundTeamname = [];
+        });
     }
     ]
     );
@@ -114,14 +114,16 @@ bot.dialog('/', intents);
 
 
 // data
-var fs = require('fs');
-var matches = JSON.parse(fs.readFileSync('matches.json', 'utf8'));
+//var fs = require('fs');
+//var matches = JSON.parse(fs.readFileSync('matches.json', 'utf8'));
 
 var findMatches = function(team1, team2){
-    var result = [];
+ return new Promise((resolve, reject) => {
+       var result = [];
     var t1 = team1.toLowerCase();
     var t2 = team2.toLowerCase();
-    matches.forEach(function(match){
+    getMatches().then(matchResult => {
+        matchResult.matches.forEach(function(match){
        
         
         if (
@@ -130,9 +132,49 @@ var findMatches = function(team1, team2){
             (match.player2.toLowerCase().indexOf(t1)>=0 && match.player1.toLowerCase().indexOf(t2)>=0)
            ) {
                 result.push(match);
-            };
+                };
+        });
+
+        // Resolve (or fulfill) the promise with data
+        return resolve(result);
+        });
     });
-    return result;
 };
 
-console.log("Tobias, Thorsten", findMatches("Tobias", "Thorsten"));
+//console.log("Tobias, Thorsten", findMatches("Tobias", "Thorsten"));
+
+
+const scrapeIt = require("scrape-it");
+
+var getMatches = function(){
+    return scrapeIt("http://www.meinspielplan.de/plan/JVt7Sv?a=dates", {
+    matches: {
+        listItem:"tr.select_matches", 
+        data: {
+            player1:{
+                selector: ".cell_2 a.team_link"
+            },
+            player2:".cell_4 a.team_link",
+            score1:{ 
+                selector:"div.dates_match_result",
+                convert: result => result.indexOf(":")<0 ? null : parseInt(result.substring(0,result.indexOf(":")))
+            },
+            score2:{ 
+                selector:"div.dates_match_result",
+                convert: result => result.indexOf(":")<0 ? null : parseInt(result.substring(result.indexOf(":")+1))
+            }
+        }
+    }
+  
+})
+};
+
+// Test it.
+getMatches().then(result => {
+    console.log(result);
+    matches = result.matches;
+    findMatches("Tobias", "Thorsten").then(matches => {
+        console.log("Tobias, Thorsten", matches);
+    })
+    
+});
