@@ -70,13 +70,7 @@ intents
         findMatches(session.dialogData.foundTeamnames[0], session.dialogData.foundTeamnames[1]).then(foundMatches =>{
             if (foundMatches.length>0){
                 session.send('Ich habe folgende Spiele gefunden:'); 
-                foundMatches.forEach(function (match){
-                    if (match.score1!=null){
-                        session.send('%s - %s --> %d : %d',match.player1 ,match.player2, match.score1, match.score2);
-                    } else {
-                        session.send('%s - %s',match.player1 ,match.player2);
-                    }
-                });
+                presentMatches(session, foundMatches);
             } else {
                 session.send('Sorry, ich habe keine Spiele zwischen '+session.dialogData.foundTeamnames[0]+' und '+session.dialogData.foundTeamnames[1]+' gefunden:');
             }
@@ -85,18 +79,88 @@ intents
     }
     ]
     );
+    intents.matches('match.mine', [
+    function (session, args, next) {
+     
+        if (session.dialogData.me === null){
+            builder.Prompts.text(session, "Sag mir doch bitte wie Dein Team heißt.");
+        } else {
+            next();
+        }
+    },
+    function (session, results, next) {
+        if (results.response) {
+            session.dialogData.me = results.response;
+            next();        
+        } 
+        else {
+            next();
+        }
+    },
+        function (session, args, next) {
+           
+        findMatches(session.dialogData.me).then(foundMatches =>{
+            
+            if (foundMatches.length>0){
+                session.send('Ich habe folgende Spiele gefunden:'); 
+                presentMatches(session, foundMatches);
+            } else {
+                session.send('Sorry, ich habe keine Spiele für Dich gefunden:');
+            }
+            
+        });
+    }
+    ]);
+
+var presentMatches = function(session, foundMatches){
+    foundMatches.forEach(function (match){
+                    if (match.scoreHome!=null){
+                        session.send('%s - %s --> %d : %d',match.homeTeam ,match.awayTeam, match.scoreHome, match.scoreAway);
+                    } else {
+                        session.send('%s - %s',match.homeTeam ,match.awayTeam);
+                    }
+                });
+};
+    
+
     intents.matches('me.name',
     [
         function (session, args, next) {
             var team = builder.EntityRecognizer.findEntity(args.entities, 'Team');
             if (team){
-                session.dialogData.me=team;
-                session.send("Alles klar, Du bist %s", team);
+                session.dialogData.me=team.entity;
+                session.send("Alles klar, Du bist %s", session.dialogData.me);
             } else {
                 session.send("Das habe ich nicht verstanden.");
             }
         }
 
+    ]);
+
+    intents.matches('league.standings',
+    [
+        function (session, args, next) {      
+                session.send("Bald kann ich bestimmt auch die Tabelle anzeigen!");
+        }
+    ]);
+        intents.matches('result.enter',
+    [
+        function (session, args, next) {      
+                session.send("Bald kann ich bestimmt auch Ergebnisse eintragen!");
+        }
+    ]);
+    intents.matches('conversation.thankyou',
+    [
+        function (session, args, next) {      
+                session.send("Aber gerne doch!");
+        }
+    ]);
+        intents.matches('conversation.hello',
+    [
+        function (session, args, next) {      
+                session.send("Hallo, ich bin der Fifa Bot!");
+                session.send("Frag mich doch was zur Fritz Fifa Liga!");
+        }
     ]);
     intents.matches('Help', '/help');
 /*
@@ -121,15 +185,15 @@ var findMatches = function(team1, team2){
  return new Promise((resolve, reject) => {
        var result = [];
     var t1 = team1.toLowerCase();
-    var t2 = team2.toLowerCase();
+    var t2 = team2!= null ? team2.toLowerCase() : null;
     getMatches().then(matchResult => {
         matchResult.matches.forEach(function(match){
        
         
         if (
-            (match.player1.toLowerCase().indexOf(t1)>=0 && match.player2.toLowerCase().indexOf(t2)>=0)
+            (match.homeTeam.toLowerCase().indexOf(t1)>=0 && (t2===null || match.awayTeam.toLowerCase().indexOf(t2)>=0))
             || 
-            (match.player2.toLowerCase().indexOf(t1)>=0 && match.player1.toLowerCase().indexOf(t2)>=0)
+            (match.awayTeam.toLowerCase().indexOf(t1)>=0 && (t2===null || match.homeTeam.toLowerCase().indexOf(t2)>=0))
            ) {
                 result.push(match);
                 };
@@ -151,15 +215,15 @@ var getMatches = function(){
     matches: {
         listItem:"tr.select_matches", 
         data: {
-            player1:{
+            homeTeam:{
                 selector: ".cell_2 a.team_link"
             },
-            player2:".cell_4 a.team_link",
-            score1:{ 
+            awayTeam:".cell_4 a.team_link",
+            scoreHome:{ 
                 selector:"div.dates_match_result",
                 convert: result => result.indexOf(":")<0 ? null : parseInt(result.substring(0,result.indexOf(":")))
             },
-            score2:{ 
+            scoreAway:{ 
                 selector:"div.dates_match_result",
                 convert: result => result.indexOf(":")<0 ? null : parseInt(result.substring(result.indexOf(":")+1))
             }
