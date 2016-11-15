@@ -113,13 +113,31 @@ intents
     ]);
 
 var presentMatches = function(session, foundMatches){
+    var cards = [];
     foundMatches.forEach(function (match){
-                    if (match.scoreHome!=null){
-                        session.send('%s - %s --> %d : %d',match.homeTeam ,match.awayTeam, match.scoreHome, match.scoreAway);
-                    } else {
-                        session.send('%s - %s',match.homeTeam ,match.awayTeam);
-                    }
+                    
+
+                        var card = new builder.ThumbnailCard(session)
+                            //.title('')
+                            .subtitle(match.homeTeam + ' - ' + match.awayTeam)
+                            //.subtitle('Your bots — wherever your users are talking')
+                            
+                            .images([builder.CardImage.create(session, 'http://www.stupidedia.org/images/thumb/d/d3/Soccerball.svg/300px-Soccerball.svg.png?filetimestamp=20120506141408')])
+                            //.buttons(getSampleCardActions(session))
+                            ;
+                            if (match.scoreHome!=null){
+                                card.text(match.scoreHome + ':'+ match.scoreAway)
+                            }
+                        //session.send(new builder.Message(session).addAttachment(card));
+                        cards.push(card);
                 });
+
+                // create reply with Carousel AttachmentLayout
+    var reply = new builder.Message(session)
+        .attachmentLayout(builder.AttachmentLayout.carousel)
+        .attachments(cards);
+
+    session.send(reply);
 };
     
 
