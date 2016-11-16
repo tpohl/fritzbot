@@ -157,8 +157,32 @@ var presentMatches = function(session, foundMatches){
 
     intents.matches('league.standings',
     [
-        function (session, args, next) {      
-                session.send("Bald kann ich bestimmt auch die Tabelle anzeigen!");
+        function (session, args, next) {     
+            getStandings().then(function(standings){ 
+                 var cards = [];
+                standings.standings.forEach(function (standing){
+                                
+
+                                    var card = new builder.ThumbnailCard(session)
+                                        //.title('')
+                                        .subtitle(standing.position + '.  ' + standing.team)
+                                        //.subtitle('Your bots — wherever your users are talking')
+                                        .text(standing.points+ ' Punkte - Tordifferenz'+ standing.goaldifference)
+                                        //.images([builder.CardImage.create(session, 'http://www.stupidedia.org/images/thumb/d/d3/Soccerball.svg/100px-Soccerball.svg.png?filetimestamp=20120506141408')])
+                                        //.buttons(getSampleCardActions(session))
+                                        ;
+                                        
+                                    //session.send(new builder.Message(session).addAttachment(card));
+                                    cards.push(card);
+                            });
+
+                            // create reply with Carousel AttachmentLayout
+                var reply = new builder.Message(session)
+                    .attachmentLayout(builder.AttachmentLayout.carousel)
+                    .attachments(cards);
+
+                session.send(reply);
+            });
         }
     ]);
         intents.matches('result.enter',
