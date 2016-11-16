@@ -160,7 +160,7 @@ var presentMatches = function(session, foundMatches){
         function (session, args, next) {     
             getStandings().then(function(standings){ 
                  var cards = [];
-                standings.standings.forEach(function (standing){
+                standings.teams.forEach(function (standing){
                                 
 
                                     var card = new builder.ThumbnailCard(session)
