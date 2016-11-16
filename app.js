@@ -122,7 +122,7 @@ var presentMatches = function(session, foundMatches){
                             .subtitle(match.homeTeam + ' - ' + match.awayTeam)
                             //.subtitle('Your bots — wherever your users are talking')
                             
-                            .images([builder.CardImage.create(session, 'http://www.stupidedia.org/images/thumb/d/d3/Soccerball.svg/300px-Soccerball.svg.png?filetimestamp=20120506141408')])
+                            .images([builder.CardImage.create(session, 'http://www.stupidedia.org/images/thumb/d/d3/Soccerball.svg/100px-Soccerball.svg.png?filetimestamp=20120506141408')])
                             //.buttons(getSampleCardActions(session))
                             ;
                             if (match.scoreHome!=null){
@@ -251,6 +251,43 @@ var getMatches = function(){
 })
 };
 
+var getStandings = function(){
+    return scrapeIt("http://www.meinspielplan.de/plan/JVt7Sv?a=table",
+    {
+        teams:{
+            listItem:"tr.match",
+            data : {
+                position:"td.team_number",
+                team:{
+                    selector: "a.team_link"
+                },
+                games:{
+                    selector:"table.groupstage_values div",
+                    how: "html"
+                },
+                goaldifference:{
+                    selector:"table.groupstage_values tr",
+                    
+                    how: function(element){
+                        return (element[0].children[11].children[0].children[0].data);
+                    }
+                }
+                ,
+                points:{
+                    selector:"table.groupstage_values tr",
+                    
+                    how: function(element){
+                        //console.log("e",element[0].children[13].children[0]);
+                        return (element[0].children[13].children[0].children[1].children[0].data);
+                    }
+                }
+
+            }
+        }
+    }
+    );
+}
+
 // Test it.
 getMatches().then(result => {
     console.log(result);
@@ -259,4 +296,8 @@ getMatches().then(result => {
         console.log("Tobias, Thorsten", matches);
     })
     
+});
+
+getStandings().then(result => {
+    console.log(result);
 });
